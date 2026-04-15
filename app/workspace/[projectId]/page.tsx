@@ -221,3 +221,7 @@ export default function WorkspacePage() {
     </div>
   );
 }
+
+export async function generateStaticParams() {
+  return [];
+}

@@ -529,3 +529,7 @@ export default function ProjectDetailPage() {
     </div>
   );
 }
+
+export async function generateStaticParams() {
+  return [];
+}

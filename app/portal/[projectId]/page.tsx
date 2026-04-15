@@ -202,3 +202,7 @@ export default function PortalPage() {
     </div>
   );
 }
+
+export async function generateStaticParams() {
+  return [];
+}
