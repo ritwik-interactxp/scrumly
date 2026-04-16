@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { projectsApi, aiApi } from "../../lib/api";
 import { clearAuth } from "../../lib/auth";
 import type { Project, ScaffoldPreview } from "../../lib/types";
+import { AiProjectSetup } from "../../components/AiProjectSetup";
 
 function ProgressBar({ value }: { value: number }) {
   return (
@@ -27,6 +28,7 @@ export default function OwnerDashboard() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [showNew, setShowNew] = useState(false);
+  const [showAiChat, setShowAiChat] = useState(false);
   const [createMode, setCreateMode] = useState<CreateMode>("choose");
   const navigate = useNavigate();
 
@@ -35,8 +37,8 @@ export default function OwnerDashboard() {
   const [newDesc, setNewDesc] = useState("");
   const [creating, setCreating] = useState(false);
 
-  // AI scaffold
-  const [aiKey, setAiKey] = useState("");
+  // AI scaffold / Chat with AI (persisted for convenience)
+  const [aiKey, setAiKey] = useState(localStorage.getItem("scrumly_api_key") || "");
   const [aiDesc, setAiDesc] = useState("");
   const [aiLoading, setAiLoading] = useState(false);
   const [aiPreview, setAiPreview] = useState<ScaffoldPreview | null>(null);
@@ -54,9 +56,10 @@ export default function OwnerDashboard() {
 
   function resetModal() {
     setShowNew(false);
+    setShowAiChat(false);
     setCreateMode("choose");
     setNewName(""); setNewDesc("");
-    setAiKey(""); setAiDesc(""); setAiPreview(null); setAiError("");
+    setAiKey(localStorage.getItem("scrumly_api_key") || ""); setAiDesc(""); setAiPreview(null); setAiError("");
     setJsonText(""); setJsonError("");
   }
 
@@ -270,6 +273,24 @@ export default function OwnerDashboard() {
                       <p className="text-xs text-zinc-500 mt-0.5">Generate JSON with any LLM and paste it here</p>
                     </div>
                   </button>
+                  <button
+                    type="button"
+                    onClick={() => { setShowNew(false); setShowAiChat(true); }}
+                    className="w-full flex items-start gap-4 p-4 rounded-xl border border-white/6 hover:border-[#7c6aff]/40 hover:bg-[#7c6aff]/5 transition-all text-left group"
+                  >
+                    <div className="w-9 h-9 rounded-lg bg-[#1a1a22] border border-white/6 flex items-center justify-center text-lg flex-shrink-0 group-hover:border-[#7c6aff]/30">
+                      ✦
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-white">
+                        Chat with AI
+                        <span className="text-xs text-[#7c6aff] font-normal ml-1">conversational setup</span>
+                      </p>
+                      <p className="text-xs text-zinc-500 mt-0.5">
+                        Have a conversation — I'll ask questions and build the structure for you
+                      </p>
+                    </div>
+                  </button>
                 </div>
               </div>
             )}
@@ -314,7 +335,7 @@ export default function OwnerDashboard() {
                     <div className="space-y-3">
                       <div>
                         <label className="text-xs text-zinc-500 mb-1.5 block">Your Anthropic API Key</label>
-                        <input type="password" value={aiKey} onChange={(e) => setAiKey(e.target.value)}
+                        <input type="password" value={aiKey} onChange={(e) => { const v = e.target.value; setAiKey(v); localStorage.setItem("scrumly_api_key", v); }}
                           placeholder="sk-ant-..."
                           className="w-full bg-[#0a0a0d] border border-white/8 rounded-lg px-3 py-2.5 text-white text-sm placeholder:text-zinc-600 focus:outline-none focus:border-[#7c6aff]/50 transition-colors font-mono" />
                         <p className="text-xs text-zinc-600 mt-1">Not stored — used only for this request</p>
@@ -413,6 +434,18 @@ export default function OwnerDashboard() {
 
           </div>
         </div>
+      )}
+
+      {showAiChat && (
+        <AiProjectSetup
+          apiKey={aiKey}
+          onCommit={(projectId) => {
+            setShowAiChat(false);
+            projectsApi.list().then(setProjects);
+            navigate(`/owner/dashboard/${projectId}`);
+          }}
+          onClose={() => setShowAiChat(false)}
+        />
       )}
     </div>
   );

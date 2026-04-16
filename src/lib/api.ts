@@ -90,8 +90,14 @@ export const portalApi = {
 export const aiApi = {
   scaffoldPreview: (description: string, anthropic_api_key: string) =>
     api.post<ScaffoldPreview>("/ai/scaffold/preview", { description, anthropic_api_key }).then((r) => r.data),
+
   scaffoldCommit: (preview: ScaffoldPreview) =>
     api.post<{ project_id: string; name: string }>("/ai/scaffold/commit", preview).then((r) => r.data),
+
   importProject: (data: ScaffoldPreview) =>
     api.post<{ project_id: string; name: string }>("/ai/import", data).then((r) => r.data),
+
+  // ✅ NEW (critical)
+  chat: (messages: { role: string; content: string }[], anthropic_api_key: string) =>
+    api.post<{ reply: string }>("/ai/chat", { messages, anthropic_api_key }).then((r) => r.data),
 };
