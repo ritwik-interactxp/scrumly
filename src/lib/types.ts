@@ -93,3 +93,27 @@ export interface PortalProject {
   modules: PortalModule[];
   overall_progress: number;
 }
+
+// ─── AI Scaffold ────────────────────────────────────────────────────────────
+
+export interface ChecklistItemImport {
+  text: string;
+  order_index: number;
+}
+
+export interface ModuleImport {
+  title: string;
+  description?: string;
+  status: ModuleStatus;
+  doc_link?: string;
+  order_index: number;
+  checklist: ChecklistItemImport[];
+}
+
+export interface ScaffoldPreview {
+  project: {
+    name: string;
+    description?: string;
+  };
+  modules: ModuleImport[];
+}

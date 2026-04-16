@@ -1,6 +1,9 @@
 import axios from "axios";
 import { getToken, clearAuth } from "./auth";
-import type { AuthToken, Project, Member, Module, ChecklistItem, PortalProject } from "./types";
+import type {
+  AuthToken, Project, Member, Module, ChecklistItem,
+  PortalProject, ScaffoldPreview
+} from "./types";
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || "http://localhost:8001",
@@ -51,6 +54,8 @@ export const membersApi = {
     api.post(`/projects/${projectId}/invite`, { email, name, role_in_project: role }).then((r) => r.data),
   remove: (projectId: string, userId: string) =>
     api.delete(`/projects/${projectId}/members/${userId}`),
+  revokeInvite: (projectId: string, userId: string) =>
+    api.post(`/projects/${projectId}/members/${userId}/revoke-invite`),
 };
 
 export const modulesApi = {
@@ -80,4 +85,13 @@ export const checklistApi = {
 export const portalApi = {
   get: (projectId: string) =>
     api.get<PortalProject>(`/portal/${projectId}`).then((r) => r.data),
+};
+
+export const aiApi = {
+  scaffoldPreview: (description: string, anthropic_api_key: string) =>
+    api.post<ScaffoldPreview>("/ai/scaffold/preview", { description, anthropic_api_key }).then((r) => r.data),
+  scaffoldCommit: (preview: ScaffoldPreview) =>
+    api.post<{ project_id: string; name: string }>("/ai/scaffold/commit", preview).then((r) => r.data),
+  importProject: (data: ScaffoldPreview) =>
+    api.post<{ project_id: string; name: string }>("/ai/import", data).then((r) => r.data),
 };
