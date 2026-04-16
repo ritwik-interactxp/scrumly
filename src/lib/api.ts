@@ -1,0 +1,83 @@
+import axios from "axios";
+import { getToken, clearAuth } from "./auth";
+import type { AuthToken, Project, Member, Module, ChecklistItem, PortalProject } from "./types";
+
+const api = axios.create({
+  baseURL: import.meta.env.VITE_API_URL || "http://localhost:8001",
+  headers: { "Content-Type": "application/json" },
+});
+
+api.interceptors.request.use((config) => {
+  const token = getToken();
+  if (token) config.headers.Authorization = `Bearer ${token}`;
+  return config;
+});
+
+api.interceptors.response.use(
+  (res) => res,
+  (error) => {
+    if (error.response?.status === 401) {
+      clearAuth();
+      window.location.href = "/auth/login";
+    }
+    return Promise.reject(error);
+  }
+);
+
+export default api;
+
+export const authApi = {
+  login: (email: string, password: string) =>
+    api.post<AuthToken>("/auth/login", { email, password }).then((r) => r.data),
+  acceptInvite: (token: string, name: string, password: string) =>
+    api.post<AuthToken>("/auth/accept-invite", { token, name, password }).then((r) => r.data),
+  me: () => api.get("/auth/me").then((r) => r.data),
+};
+
+export const projectsApi = {
+  list: () => api.get<Project[]>("/projects").then((r) => r.data),
+  get: (id: string) => api.get<Project>(`/projects/${id}`).then((r) => r.data),
+  create: (name: string, description?: string) =>
+    api.post<Project>("/projects", { name, description }).then((r) => r.data),
+  update: (id: string, data: Partial<{ name: string; description: string; status: string }>) =>
+    api.patch<Project>(`/projects/${id}`, data).then((r) => r.data),
+  delete: (id: string) => api.delete(`/projects/${id}`),
+};
+
+export const membersApi = {
+  list: (projectId: string) =>
+    api.get<Member[]>(`/projects/${projectId}/members`).then((r) => r.data),
+  invite: (projectId: string, email: string, name: string, role: string) =>
+    api.post(`/projects/${projectId}/invite`, { email, name, role_in_project: role }).then((r) => r.data),
+  remove: (projectId: string, userId: string) =>
+    api.delete(`/projects/${projectId}/members/${userId}`),
+};
+
+export const modulesApi = {
+  list: (projectId: string) =>
+    api.get<Module[]>(`/projects/${projectId}/modules`).then((r) => r.data),
+  create: (projectId: string, data: { title: string; description?: string; doc_link?: string }) =>
+    api.post<Module>(`/projects/${projectId}/modules`, data).then((r) => r.data),
+  update: (projectId: string, moduleId: string, data: Partial<{ title: string; description: string; status: string; doc_link: string }>) =>
+    api.patch<Module>(`/projects/${projectId}/modules/${moduleId}`, data).then((r) => r.data),
+  delete: (projectId: string, moduleId: string) =>
+    api.delete(`/projects/${projectId}/modules/${moduleId}`),
+};
+
+export const checklistApi = {
+  list: (projectId: string, moduleId: string) =>
+    api.get<ChecklistItem[]>(`/projects/${projectId}/modules/${moduleId}/checklist`).then((r) => r.data),
+  add: (projectId: string, moduleId: string, text: string) =>
+    api.post<ChecklistItem>(`/projects/${projectId}/modules/${moduleId}/checklist`, { text }).then((r) => r.data),
+  toggle: (projectId: string, itemId: string) =>
+    api.patch<ChecklistItem>(`/projects/${projectId}/checklist/${itemId}/toggle`).then((r) => r.data),
+  update: (projectId: string, itemId: string, text: string) =>
+    api.patch<ChecklistItem>(`/projects/${projectId}/checklist/${itemId}`, { text }).then((r) => r.data),
+  delete: (projectId: string, itemId: string) =>
+    api.delete(`/projects/${projectId}/checklist/${itemId}`),
+};
+
+export const portalApi = {
+  get: (projectId: string) =>
+    api.get<PortalProject>(`/portal/${projectId}`).then((r) => r.data),
+};
