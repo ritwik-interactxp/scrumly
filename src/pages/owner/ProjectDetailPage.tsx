@@ -655,7 +655,7 @@ function MemberRow({ member, onRemove }: { member: Member; onRemove: () => void 
   return (
     <div className="bg-[#111114] border border-[#1e1e24] rounded-xl px-4 py-3 flex items-center justify-between gap-3 group hover:border-[#2e2e38] transition-colors">
       <div className="flex items-center gap-3 min-w-0">
-        <Avatar name={member.name} />
+        <Avatar name={member.name} size={8} />
         <div className="min-w-0">
           <p className="text-sm font-medium truncate">{member.name}</p>
           <p className="text-xs text-[#5a5a66] truncate">{member.email}</p>
@@ -679,19 +679,7 @@ function MemberRow({ member, onRemove }: { member: Member; onRemove: () => void 
   );
 }
 
-function Avatar({ name }: { name: string }) {
-  const initials = name.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase();
-  const colors = ["#7c6aff", "#f59e0b", "#22c55e", "#3b82f6", "#ec4899", "#14b8a6"];
-  const color = colors[name.charCodeAt(0) % colors.length];
-  return (
-    <div
-      className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold text-white flex-shrink-0"
-      style={{ background: color }}
-    >
-      {initials}
-    </div>
-  );
-}
+
 
 function Modal({ children, onClose, title }: { children: React.ReactNode; onClose: () => void; title: string }) {
   return (
