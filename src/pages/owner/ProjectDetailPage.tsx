@@ -609,6 +609,7 @@ export default function ProjectDetailPage() {
       {showAiChat && (
         <AiProjectSetup
           apiKey={aiKey}
+          projectId={projectId}
           onCommit={(newProjectId) => {
             if (newProjectId !== projectId) {
               navigate(`/owner/dashboard/${newProjectId}`);

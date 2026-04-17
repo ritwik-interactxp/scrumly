@@ -97,7 +97,48 @@ export const aiApi = {
   importProject: (data: ScaffoldPreview) =>
     api.post<{ project_id: string; name: string }>("/ai/import", data).then((r) => r.data),
 
-  // ✅ NEW (critical)
+  // Stateless chat (legacy — kept for backward compat, used in dashboard new-project flow)
   chat: (messages: { role: string; content: string }[], anthropic_api_key: string) =>
     api.post<{ reply: string }>("/ai/chat", { messages, anthropic_api_key }).then((r) => r.data),
+};
+
+// ── Persistent chat sessions (per-project) ────────────────────────────────
+export interface ChatSession {
+  id: string;
+  project_id: string;
+  title: string;
+  created_at: string;
+  updated_at: string;
+  message_count: number;
+}
+
+export interface ChatMessage {
+  id: string;
+  session_id: string;
+  role: "user" | "assistant";
+  content: string;
+  created_at: string;
+}
+
+export const chatApi = {
+  listSessions: (projectId: string) =>
+    api.get<ChatSession[]>(`/projects/${projectId}/chat/sessions`).then((r) => r.data),
+
+  createSession: (projectId: string, title = "New chat") =>
+    api.post<ChatSession>(`/projects/${projectId}/chat/sessions`, { title }).then((r) => r.data),
+
+  deleteSession: (projectId: string, sessionId: string) =>
+    api.delete(`/projects/${projectId}/chat/sessions/${sessionId}`),
+
+  renameSession: (projectId: string, sessionId: string, title: string) =>
+    api.patch<ChatSession>(`/projects/${projectId}/chat/sessions/${sessionId}`, { title }).then((r) => r.data),
+
+  getMessages: (projectId: string, sessionId: string) =>
+    api.get<ChatMessage[]>(`/projects/${projectId}/chat/sessions/${sessionId}/messages`).then((r) => r.data),
+
+  send: (projectId: string, sessionId: string, content: string, anthropic_api_key: string) =>
+    api.post<{ reply: string; session_id: string; session_title: string }>(
+      `/projects/${projectId}/chat/sessions/${sessionId}/send`,
+      { content, anthropic_api_key }
+    ).then((r) => r.data),
 };
