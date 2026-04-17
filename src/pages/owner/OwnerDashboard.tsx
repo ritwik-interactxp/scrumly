@@ -50,6 +50,10 @@ export default function OwnerDashboard() {
   const [jsonError, setJsonError] = useState("");
   const [jsonImporting, setJsonImporting] = useState(false);
 
+  // Delete project
+  const [confirmDeleteProject, setConfirmDeleteProject] = useState<Project | null>(null);
+  const [deletingProject, setDeletingProject] = useState(false);
+
   useEffect(() => {
     projectsApi.list().then(setProjects).finally(() => setLoading(false));
   }, []);
@@ -122,6 +126,16 @@ export default function OwnerDashboard() {
     } catch (e: any) {
       setJsonError(e?.response?.data?.detail || "Import failed.");
     } finally { setJsonImporting(false); }
+  }
+
+  // ── Delete Project ────────────────────────────────────────────────────────
+  async function deleteProject(project: Project) {
+    setDeletingProject(true);
+    try {
+      await projectsApi.delete(project.id);
+      setProjects((prev) => prev.filter((p) => p.id !== project.id));
+      setConfirmDeleteProject(null);
+    } finally { setDeletingProject(false); }
   }
 
   const active = projects.filter((p) => p.status === "active");
@@ -197,38 +211,48 @@ export default function OwnerDashboard() {
         ) : (
           <div className="grid grid-cols-2 gap-4">
             {projects.map((project) => (
-              <Link key={project.id} to={`/owner/dashboard/${project.id}`}
-                className="group bg-[#111116] border border-white/5 hover:border-white/10 rounded-xl p-5 transition-all hover:shadow-xl hover:shadow-black/30 relative overflow-hidden">
-                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                  style={{ background: "radial-gradient(circle at top right, #7c6aff08, transparent 60%)" }} />
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex items-center gap-2">
-                    <StatusDot status={project.status} />
-                    <span className="font-semibold text-sm">{project.name}</span>
+              <div key={project.id} className="relative group">
+                <Link to={`/owner/dashboard/${project.id}`}
+                  className="block bg-[#111116] border border-white/5 hover:border-white/10 rounded-xl p-5 transition-all hover:shadow-xl hover:shadow-black/30 relative overflow-hidden">
+                  <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                    style={{ background: "radial-gradient(circle at top right, #7c6aff08, transparent 60%)" }} />
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="flex items-center gap-2">
+                      <StatusDot status={project.status} />
+                      <span className="font-semibold text-sm">{project.name}</span>
+                    </div>
+                    <span className={`text-xs px-2 py-0.5 rounded-full border font-medium
+                      ${project.status === "active"
+                        ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-400"
+                        : "border-white/10 bg-white/5 text-zinc-500"}`}>
+                      {project.status}
+                    </span>
                   </div>
-                  <span className={`text-xs px-2 py-0.5 rounded-full border font-medium
-                    ${project.status === "active"
-                      ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-400"
-                      : "border-white/10 bg-white/5 text-zinc-500"}`}>
-                    {project.status}
-                  </span>
-                </div>
-                {project.description && (
-                  <p className="text-xs text-zinc-500 mb-4 line-clamp-1">{project.description}</p>
-                )}
-                <div className="space-y-2 mb-4">
-                  <div className="flex justify-between text-xs text-zinc-600">
-                    <span>Progress</span>
-                    <span className="font-mono text-zinc-400">{project.progress}%</span>
+                  {project.description && (
+                    <p className="text-xs text-zinc-500 mb-4 line-clamp-1">{project.description}</p>
+                  )}
+                  <div className="space-y-2 mb-4">
+                    <div className="flex justify-between text-xs text-zinc-600">
+                      <span>Progress</span>
+                      <span className="font-mono text-zinc-400">{project.progress}%</span>
+                    </div>
+                    <ProgressBar value={project.progress} />
                   </div>
-                  <ProgressBar value={project.progress} />
-                </div>
-                <div className="flex items-center gap-4 text-xs text-zinc-600">
-                  <span>{project.module_count} modules</span>
-                  <span>·</span>
-                  <span>{project.member_count} members</span>
-                </div>
-              </Link>
+                  <div className="flex items-center gap-4 text-xs text-zinc-600">
+                    <span>{project.module_count} modules</span>
+                    <span>·</span>
+                    <span>{project.member_count} members</span>
+                  </div>
+                </Link>
+                {/* Delete button — floats over the card */}
+                <button
+                  onClick={(e) => { e.preventDefault(); setConfirmDeleteProject(project); }}
+                  className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-all w-6 h-6 rounded-md bg-[#1a1a22] border border-white/8 text-zinc-600 hover:text-red-400 hover:border-red-500/30 hover:bg-red-500/10 flex items-center justify-center text-sm leading-none z-10"
+                  title="Delete project"
+                >
+                  ×
+                </button>
+              </div>
             ))}
           </div>
         )}
@@ -446,6 +470,39 @@ export default function OwnerDashboard() {
           }}
           onClose={() => setShowAiChat(false)}
         />
+      )}
+
+      {/* ── Delete Project Confirmation ── */}
+      {confirmDeleteProject && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-50"
+          onClick={() => setConfirmDeleteProject(null)}>
+          <div className="bg-[#111116] border border-white/8 rounded-2xl w-full max-w-sm shadow-2xl p-6"
+            onClick={(e) => e.stopPropagation()}>
+            <h3 className="font-semibold text-white mb-2">Delete Project</h3>
+            <p className="text-sm text-zinc-400 mb-1">
+              Are you sure you want to delete{" "}
+              <span className="text-white font-medium">"{confirmDeleteProject.name}"</span>?
+            </p>
+            <p className="text-xs text-zinc-600 mb-5">
+              This will permanently remove the project, all its modules, tasks, and members. This cannot be undone.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setConfirmDeleteProject(null)}
+                className="flex-1 border border-white/8 text-zinc-500 hover:text-white text-sm font-medium py-2.5 rounded-lg transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => deleteProject(confirmDeleteProject)}
+                disabled={deletingProject}
+                className="flex-1 bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-400 hover:text-red-300 text-sm font-medium py-2.5 rounded-lg transition-colors disabled:opacity-50"
+              >
+                {deletingProject ? "Deleting..." : "Delete Project"}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

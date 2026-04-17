@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useNavigate } from "react-router-dom";
 import { projectsApi, modulesApi, membersApi, checklistApi } from "../../lib/api";
 import type { Project, Module, Member, ChecklistItem } from "../../lib/types";
 
@@ -37,10 +37,15 @@ function Avatar({ name, size = 8 }: { name: string; size?: number }) {
 
 export default function ProjectDetailPage() {
   const { projectId } = useParams<{ projectId: string }>();
+  const navigate = useNavigate();
   const [project, setProject] = useState<Project | null>(null);
   const [modules, setModules] = useState<Module[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
   const [activeTab, setActiveTab] = useState<"modules" | "members">("modules");
+
+  // Delete project
+  const [confirmDeleteProject, setConfirmDeleteProject] = useState(false);
+  const [deletingProject, setDeletingProject] = useState(false);
 
   // Module form
   const [showModuleForm, setShowModuleForm] = useState(false);
@@ -161,6 +166,15 @@ export default function ProjectDetailPage() {
     setModules((prev) => prev.map((m) => (m.id === moduleId ? updated : m)));
   }
 
+  async function handleDeleteProject() {
+    if (!projectId) return;
+    setDeletingProject(true);
+    try {
+      await projectsApi.delete(projectId);
+      navigate("/owner/dashboard");
+    } finally { setDeletingProject(false); }
+  }
+
   if (!project)
     return (
       <div className="min-h-screen bg-[#0d0d0f] flex items-center justify-center">
@@ -178,8 +192,14 @@ export default function ProjectDetailPage() {
 
       {/* ── Header ── */}
       <header className="border-b border-[#1e1e24] px-6 py-4 flex-shrink-0">
-        <div className="flex items-center gap-2 text-xs text-[#5a5a66] mb-2">
-          <Link to="/owner/dashboard" className="hover:text-white transition-colors">Dashboard</Link>
+        <div className="flex items-center gap-2 text-xs text-[#5a5a66] mb-3">
+          <button
+            onClick={() => navigate("/owner/dashboard")}
+            className="flex items-center gap-1.5 text-[#5a5a66] hover:text-white transition-colors group"
+          >
+            <span className="text-base leading-none group-hover:-translate-x-0.5 transition-transform inline-block">←</span>
+            <span>Dashboard</span>
+          </button>
           <span>/</span>
           <span className="text-white">{project.name}</span>
         </div>
@@ -204,6 +224,13 @@ export default function ProjectDetailPage() {
               className="bg-[#7c6aff] hover:bg-[#6b59ee] text-white text-sm px-4 py-1.5 rounded-lg transition-colors flex items-center gap-1.5"
             >
               <span>+</span> Invite
+            </button>
+            <button
+              onClick={() => setConfirmDeleteProject(true)}
+              className="border border-[#1e1e24] text-[#5a5a66] hover:text-red-400 hover:border-red-500/30 hover:bg-red-500/5 text-sm px-3 py-1.5 rounded-lg transition-colors"
+              title="Delete project"
+            >
+              Delete
             </button>
           </div>
         </div>
@@ -641,6 +668,29 @@ export default function ProjectDetailPage() {
               {actionLoading
                 ? "Removing..."
                 : confirmRemoveMember.status === "pending" ? "Revoke Invite" : "Remove Member"}
+            </button>
+          </div>
+        </Modal>
+      )}
+
+      {/* ── Modal: Confirm Delete Project ── */}
+      {confirmDeleteProject && (
+        <Modal onClose={() => setConfirmDeleteProject(false)} title="Delete Project">
+          <p className="text-sm text-[#8a8a99] mb-1">
+            Are you sure you want to delete{" "}
+            <span className="text-white font-medium">"{project.name}"</span>?
+          </p>
+          <p className="text-xs text-[#5a5a66] mb-5">
+            This will permanently remove the project, all its modules, tasks, and members. This cannot be undone.
+          </p>
+          <div className="flex gap-3">
+            <button onClick={() => setConfirmDeleteProject(false)} className={BTN_GHOST}>Cancel</button>
+            <button
+              onClick={handleDeleteProject}
+              disabled={deletingProject}
+              className="flex-1 bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-400 hover:text-red-300 text-sm py-2.5 rounded-lg transition-colors disabled:opacity-50"
+            >
+              {deletingProject ? "Deleting..." : "Delete Project"}
             </button>
           </div>
         </Modal>
