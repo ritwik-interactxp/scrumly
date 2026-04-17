@@ -36,6 +36,19 @@ function Avatar({ name, size = 8 }: { name: string; size?: number }) {
   );
 }
 
+// ── Due Date helpers ───────────────────────────────────────────────────────────
+
+function dueBadge(due_date: string | null | undefined, status: string) {
+  if (!due_date || status === "done") return null;
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const due = new Date(due_date + "T00:00:00");
+  const diff = Math.round((due.getTime() - today.getTime()) / 86400000);
+  if (diff < 0)  return { label: `${Math.abs(diff)}d overdue`, color: "#ef4444", bg: "#ef444415", border: "#ef444430" };
+  if (diff === 0) return { label: "Due today",               color: "#f59e0b", bg: "#f59e0b15", border: "#f59e0b30" };
+  if (diff <= 3)  return { label: `${diff}d left`,           color: "#f59e0b", bg: "#f59e0b10", border: "#f59e0b25" };
+  return           { label: `${diff}d left`,                 color: "#5a5a66", bg: "transparent", border: "#2e2e38" };
+}
+
 // ── Map View Component ─────────────────────────────────────────────────────────
 
 function MapView({
@@ -208,6 +221,7 @@ export default function ProjectDetailPage() {
   const [moduleTitle, setModuleTitle] = useState("");
   const [moduleDesc, setModuleDesc] = useState("");
   const [moduleDoc, setModuleDoc] = useState("");
+  const [moduleDueDate, setModuleDueDate] = useState("");
   const [creatingModule, setCreatingModule] = useState(false);
 
   const [showInvite, setShowInvite] = useState(false);
@@ -245,10 +259,17 @@ export default function ProjectDetailPage() {
         title: moduleTitle,
         description: moduleDesc || undefined,
         doc_link: moduleDoc || undefined,
+        due_date: moduleDueDate || undefined,
       });
       setModules((prev) => [...prev, m]);
-      setShowModuleForm(false); setModuleTitle(""); setModuleDesc(""); setModuleDoc("");
+      setShowModuleForm(false); setModuleTitle(""); setModuleDesc(""); setModuleDoc(""); setModuleDueDate("");
     } finally { setCreatingModule(false); }
+  }
+
+  async function updateModuleDueDate(moduleId: string, due_date: string) {
+    if (!projectId) return;
+    const updated = await modulesApi.update(projectId, moduleId, { due_date: due_date || null });
+    setModules((prev) => prev.map((m) => (m.id === moduleId ? updated : m)));
   }
 
   async function deleteModule(mod: Module) {
@@ -492,6 +513,9 @@ export default function ProjectDetailPage() {
                         <div className="flex items-start justify-between gap-3 mb-3">
                           <span className="font-medium text-sm leading-snug">{mod.title}</span>
                           <div className="flex items-center gap-2 flex-shrink-0">
+                            {(() => { const b = dueBadge(mod.due_date, mod.status); return b ? (
+                              <span className="text-[10px] px-1.5 py-0.5 rounded-full border whitespace-nowrap" style={{ color: b.color, background: b.bg, borderColor: b.border }}>{b.label}</span>
+                            ) : null; })()}
                             <select
                               value={mod.status}
                               onClick={(e) => e.stopPropagation()}
@@ -575,9 +599,23 @@ export default function ProjectDetailPage() {
         {selectedModule && activeTab === "modules" && (
           <div className="w-80 border-l border-[#1e1e24] flex flex-col bg-[#0d0d0f] flex-shrink-0">
             <div className="p-4 border-b border-[#1e1e24] flex items-start justify-between gap-2">
-              <div className="min-w-0">
+              <div className="min-w-0 flex-1">
                 <p className="font-medium text-sm truncate">{selectedModule.title}</p>
                 <p className="text-xs text-[#5a5a66] mt-0.5">{selectedModule.checklist_done}/{selectedModule.checklist_total} tasks · {selectedModule.progress}%</p>
+                <div className="flex items-center gap-2 mt-2">
+                  <span className="text-xs text-[#5a5a66]">Due:</span>
+                  <input
+                    type="date"
+                    value={selectedModule.due_date || ""}
+                    onClick={(e) => e.stopPropagation()}
+                    onChange={(e) => updateModuleDueDate(selectedModule.id, e.target.value)}
+                    className="text-xs bg-[#0d0d0f] border border-[#2e2e38] rounded px-1.5 py-0.5 text-[#8a8a99] focus:outline-none focus:border-[#7c6aff] cursor-pointer"
+                  />
+                  {selectedModule.due_date && (() => {
+                    const b = dueBadge(selectedModule.due_date, selectedModule.status);
+                    return b ? <span className="text-[10px] px-1.5 py-0.5 rounded-full border" style={{ color: b.color, background: b.bg, borderColor: b.border }}>{b.label}</span> : null;
+                  })()}
+                </div>
               </div>
               <button onClick={() => setSelectedModule(null)} className="text-[#5a5a66] hover:text-white text-xl leading-none flex-shrink-0 mt-0.5">×</button>
             </div>
@@ -628,6 +666,10 @@ export default function ProjectDetailPage() {
             <input type="text" value={moduleTitle} onChange={(e) => setModuleTitle(e.target.value)} placeholder="Module title *" autoFocus className={INPUT} />
             <textarea value={moduleDesc} onChange={(e) => setModuleDesc(e.target.value)} placeholder="Description (optional)" rows={3} className={`${INPUT} resize-none`} />
             <input type="url" value={moduleDoc} onChange={(e) => setModuleDoc(e.target.value)} placeholder="Documentation link (optional)" className={INPUT} />
+            <div>
+              <label className="text-xs text-[#5a5a66] block mb-1">Due date (optional)</label>
+              <input type="date" value={moduleDueDate} onChange={(e) => setModuleDueDate(e.target.value)} className={INPUT} />
+            </div>
           </div>
           <div className="flex gap-3 mt-5">
             <button onClick={() => setShowModuleForm(false)} className={BTN_GHOST}>Cancel</button>

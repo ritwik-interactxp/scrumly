@@ -54,6 +54,7 @@ export interface Module {
   status: ModuleStatus;
   doc_link?: string;
   order_index: number;
+  due_date?: string | null;
   created_at: string;
   checklist_total: number;
   checklist_done: number;
