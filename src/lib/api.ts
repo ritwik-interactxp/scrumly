@@ -61,9 +61,9 @@ export const membersApi = {
 export const modulesApi = {
   list: (projectId: string) =>
     api.get<Module[]>(`/projects/${projectId}/modules`).then((r) => r.data),
-  create: (projectId: string, data: { title: string; description?: string; doc_link?: string }) =>
+  create: (projectId: string, data: { title: string; description?: string; doc_link?: string; due_date?: string }) =>
     api.post<Module>(`/projects/${projectId}/modules`, data).then((r) => r.data),
-  update: (projectId: string, moduleId: string, data: Partial<{ title: string; description: string; status: string; doc_link: string }>) =>
+  update: (projectId: string, moduleId: string, data: Partial<{ title: string; description: string; status: string; doc_link: string; due_date: string }>) =>
     api.patch<Module>(`/projects/${projectId}/modules/${moduleId}`, data).then((r) => r.data),
   delete: (projectId: string, moduleId: string) =>
     api.delete(`/projects/${projectId}/modules/${moduleId}`),
