@@ -302,8 +302,6 @@ export function AiProjectSetup({ projectId, onCommit, onProjectEdited, onClose }
                 {showPreview ? "Hide preview" : "View project preview ✦"}
               </button>
             )}
-            <button onClick={() => { setShowKeyInput(true); setMessages([]); }}
-              className="text-xs px-3 py-1.5 rounded-lg border border-white/8 text-[#8a8a99] hover:text-white transition-colors" title="Change API key">🔑</button>
             <button onClick={onClose} className="text-[#5a5a66] hover:text-white text-xl leading-none w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white/5 transition-colors">×</button>
           </div>
         </div>

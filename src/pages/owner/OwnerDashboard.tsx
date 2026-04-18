@@ -62,7 +62,7 @@ export default function OwnerDashboard() {
     setShowAiChat(false);
     setCreateMode("choose");
     setNewName(""); setNewDesc("");
-    setAiKey(localStorage.getItem("scrumly_api_key") || ""); setAiDesc(""); setAiPreview(null); setAiError("");
+    setAiDesc(""); setAiPreview(null); setAiError("");
     setJsonText(""); setJsonError("");
   }
 
