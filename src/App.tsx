@@ -9,6 +9,8 @@ import WorkspaceHome from "./pages/workspace/WorkspaceHome";
 import WorkspacePage from "./pages/workspace/WorkspacePage";
 import PortalHome from "./pages/portal/PortalHome";
 import PortalPage from "./pages/portal/PortalPage";
+import PublicPortalPage from "./pages/portal/PublicPortalPage";
+import SettingsPage from "./pages/settings/SettingsPage";
 
 function RootRedirect() {
   if (!isAuthenticated()) return <Navigate to="/auth/login" replace />;
@@ -23,6 +25,10 @@ export default function App() {
       <Route path="/auth/login" element={<LoginPage />} />
       <Route path="/auth/accept-invite" element={<AcceptInvitePage />} />
 
+      {/* ── Public portal — no login required ── */}
+      <Route path="/p/:shareToken" element={<PublicPortalPage />} />
+
+      {/* ── Owner ── */}
       <Route path="/owner/dashboard" element={
         <ProtectedRoute allowedRoles={["owner"]}><OwnerDashboard /></ProtectedRoute>
       } />
@@ -30,6 +36,12 @@ export default function App() {
         <ProtectedRoute allowedRoles={["owner"]}><ProjectDetailPage /></ProtectedRoute>
       } />
 
+      {/* ── Settings (owner only) ── */}
+      <Route path="/settings" element={
+        <ProtectedRoute allowedRoles={["owner"]}><SettingsPage /></ProtectedRoute>
+      } />
+
+      {/* ── Workspace (colleagues) ── */}
       <Route path="/workspace" element={
         <ProtectedRoute allowedRoles={["colleague"]}><WorkspaceHome /></ProtectedRoute>
       } />
@@ -37,6 +49,7 @@ export default function App() {
         <ProtectedRoute allowedRoles={["colleague"]}><WorkspacePage /></ProtectedRoute>
       } />
 
+      {/* ── Authenticated portal (owner preview / old client login flow) ── */}
       <Route path="/portal" element={
         <ProtectedRoute allowedRoles={["client", "owner"]}><PortalHome /></ProtectedRoute>
       } />

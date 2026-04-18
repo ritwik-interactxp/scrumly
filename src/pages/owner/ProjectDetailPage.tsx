@@ -232,6 +232,10 @@ export default function ProjectDetailPage() {
   const [inviteLink, setInviteLink] = useState("");
   const [copySuccess, setCopySuccess] = useState(false);
 
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [shareCopySuccess, setShareCopySuccess] = useState(false);
+  const [regenerating, setRegenerating] = useState(false);
+
   const [selectedModule, setSelectedModule] = useState<Module | null>(null);
   const [checklist, setChecklist] = useState<ChecklistItem[]>([]);
   const [newItem, setNewItem] = useState("");
@@ -341,6 +345,29 @@ export default function ProjectDetailPage() {
     projectsApi.get(projectId).then(setProject);
   }
 
+  function getPublicPortalUrl() {
+    if (!project?.share_token) return "";
+    const base = window.location.origin;
+    return `${base}/p/${project.share_token}`;
+  }
+
+  async function copyShareLink() {
+    await navigator.clipboard.writeText(getPublicPortalUrl());
+    setShareCopySuccess(true);
+    setTimeout(() => setShareCopySuccess(false), 2000);
+  }
+
+  async function regenerateShareToken() {
+    if (!projectId) return;
+    setRegenerating(true);
+    try {
+      const updated = await projectsApi.regenerateShareToken(projectId);
+      setProject(updated);
+    } finally {
+      setRegenerating(false);
+    }
+  }
+
   async function handleDeleteProject() {
     if (!projectId) return;
     setDeletingProject(true);
@@ -401,6 +428,15 @@ export default function ProjectDetailPage() {
               <span>Preview Portal</span>
               <span className="text-xs opacity-60">↗</span>
             </Link>
+            <button
+              onClick={() => setShowShareModal(true)}
+              className="border border-[#7c6aff]/40 bg-[#7c6aff]/08 hover:bg-[#7c6aff]/15 text-[#7c6aff] text-sm px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1.5"
+            >
+              <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+                <path d="M8.5 1.5L11.5 4.5M11.5 4.5L8.5 7.5M11.5 4.5H4.5C3.4 4.5 2.5 5.4 2.5 6.5V11.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+              <span>Client Link</span>
+            </button>
             <button
               onClick={() => setShowInvite(true)}
               className="bg-[#7c6aff] hover:bg-[#6b59ee] text-white text-sm px-4 py-1.5 rounded-lg transition-colors flex items-center gap-1.5"
@@ -756,6 +792,43 @@ export default function ProjectDetailPage() {
             <button onClick={handleDeleteProject} disabled={deletingProject}
               className="flex-1 bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-400 hover:text-red-300 text-sm py-2.5 rounded-lg transition-colors disabled:opacity-50">
               {deletingProject ? "Deleting..." : "Delete Project"}
+            </button>
+          </div>
+        </Modal>
+      )}
+
+      {showShareModal && project && (
+        <Modal onClose={() => setShowShareModal(false)} title="Share Client Portal">
+          <p className="text-sm text-[#8a8a99] mb-4">
+            Anyone with this link can view the project portal — no account or login needed.
+          </p>
+          <div className="bg-[#0d0d0f] border border-[#1e1e24] rounded-lg px-3 py-3 text-xs text-[#7c6aff] break-all leading-relaxed mb-3">
+            {getPublicPortalUrl() || "Loading…"}
+          </div>
+          <div className="flex gap-2 mb-4">
+            <button
+              onClick={copyShareLink}
+              className={`flex-1 ${shareCopySuccess ? "bg-emerald-500 hover:bg-emerald-600" : "bg-[#7c6aff] hover:bg-[#6b59ee]"} text-white text-sm py-2.5 rounded-lg transition-colors`}
+            >
+              {shareCopySuccess ? "✓ Copied!" : "Copy Link"}
+            </button>
+            <a
+              href={getPublicPortalUrl()}
+              target="_blank"
+              rel="noreferrer"
+              className="border border-[#1e1e24] text-[#8a8a99] hover:text-white text-sm px-4 py-2.5 rounded-lg transition-colors"
+            >
+              Open ↗
+            </a>
+          </div>
+          <div className="border-t border-[#1e1e24] pt-3">
+            <p className="text-xs text-[#3a3a44] mb-2">Need to invalidate the old link? Regenerate to get a new token — the old URL will stop working immediately.</p>
+            <button
+              onClick={regenerateShareToken}
+              disabled={regenerating}
+              className="text-xs text-[#5a5a66] hover:text-red-400 transition-colors disabled:opacity-50"
+            >
+              {regenerating ? "Regenerating…" : "⚠ Regenerate link (breaks old URL)"}
             </button>
           </div>
         </Modal>

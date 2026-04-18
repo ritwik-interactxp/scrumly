@@ -167,6 +167,14 @@ export default function OwnerDashboard() {
           >
             <span className="text-base leading-none">+</span> New Project
           </button>
+          <a href="/settings"
+            className="text-xs text-zinc-600 hover:text-zinc-300 transition-colors px-2 py-1 flex items-center gap-1">
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+              <path d="M6 7.5a1.5 1.5 0 100-3 1.5 1.5 0 000 3z" stroke="currentColor" strokeWidth="1.1"/>
+              <path d="M9.5 6c0-.2 0-.4-.04-.6l1.04-.8-.8-1.38-.3.1a3.5 3.5 0 00-.86-.5l-.1-.3L8 2.2l-.34.32-.1.3a3.5 3.5 0 00-.86.5l-.3-.1-.8 1.38 1.04.8A3.6 3.6 0 006 6c0 .2 0 .4.04.6l-1.04.8.8 1.38.3-.1c.26.2.54.37.86.5l.1.3.34.32.34-.32.1-.3c.32-.13.6-.3.86-.5l.3.1.8-1.38-1.04-.8C9.5 6.4 9.5 6.2 9.5 6z" stroke="currentColor" strokeWidth="1.1"/>
+            </svg>
+            Settings
+          </a>
           <button onClick={() => { clearAuth(); navigate("/auth/login"); }}
             className="text-xs text-zinc-600 hover:text-zinc-300 transition-colors px-2 py-1">
             Sign out

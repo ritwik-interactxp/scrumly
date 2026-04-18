@@ -30,6 +30,7 @@ export interface Project {
   member_count: number;
   module_count: number;
   progress: number;
+  share_token?: string;  // used by owner to generate public portal link
 }
 
 export type ProjectRoleInProject = "colleague" | "client";
@@ -76,6 +77,11 @@ export interface ChecklistItem {
 
 // ─── Portal ─────────────────────────────────────────────────────────────────
 
+export interface PortalChecklistItem {
+  text: string;
+  is_done: boolean;
+}
+
 export interface PortalModule {
   id: string;
   title: string;
@@ -85,6 +91,7 @@ export interface PortalModule {
   progress: number;
   checklist_total: number;
   checklist_done: number;
+  checklist_items: PortalChecklistItem[];  // actual task names now included
 }
 
 export interface PortalProject {
@@ -117,4 +124,13 @@ export interface ScaffoldPreview {
     description?: string;
   };
   modules: ModuleImport[];
+}
+
+// ─── API Keys ────────────────────────────────────────────────────────────────
+
+export interface KeyStatus {
+  has_anthropic: boolean;
+  has_openai: boolean;
+  anthropic_masked?: string;
+  openai_masked?: string;
 }
