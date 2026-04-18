@@ -11,6 +11,8 @@ import PortalHome from "./pages/portal/PortalHome";
 import PortalPage from "./pages/portal/PortalPage";
 import PublicPortalPage from "./pages/portal/PublicPortalPage";
 import SettingsPage from "./pages/settings/SettingsPage";
+import OwnerLogsPage from "./pages/logs/OwnerLogsPage";
+import DailySummaryPage from "./pages/daily/DailySummaryPage";
 
 function RootRedirect() {
   if (!isAuthenticated()) return <Navigate to="/auth/login" replace />;
@@ -18,17 +20,23 @@ function RootRedirect() {
   return <Navigate to={role ? homeRouteForRole(role) : "/auth/login"} replace />;
 }
 
+// Alias /dashboard → /owner/dashboard
+function DashboardRedirect() {
+  return <Navigate to="/owner/dashboard" replace />;
+}
+
 export default function App() {
   return (
     <Routes>
       <Route path="/" element={<RootRedirect />} />
+      <Route path="/dashboard" element={<DashboardRedirect />} />
       <Route path="/auth/login" element={<LoginPage />} />
       <Route path="/auth/accept-invite" element={<AcceptInvitePage />} />
 
-      {/* ── Public portal — no login required ── */}
+      {/* Public portal — no login */}
       <Route path="/p/:shareToken" element={<PublicPortalPage />} />
 
-      {/* ── Owner ── */}
+      {/* Owner */}
       <Route path="/owner/dashboard" element={
         <ProtectedRoute allowedRoles={["owner"]}><OwnerDashboard /></ProtectedRoute>
       } />
@@ -36,12 +44,22 @@ export default function App() {
         <ProtectedRoute allowedRoles={["owner"]}><ProjectDetailPage /></ProtectedRoute>
       } />
 
-      {/* ── Settings (owner only) ── */}
+      {/* Settings */}
       <Route path="/settings" element={
         <ProtectedRoute allowedRoles={["owner"]}><SettingsPage /></ProtectedRoute>
       } />
 
-      {/* ── Workspace (colleagues) ── */}
+      {/* Owner logs */}
+      <Route path="/logs" element={
+        <ProtectedRoute allowedRoles={["owner"]}><OwnerLogsPage /></ProtectedRoute>
+      } />
+
+      {/* Daily summary (owner + colleagues) */}
+      <Route path="/projects/:projectId/daily" element={
+        <ProtectedRoute allowedRoles={["owner", "colleague"]}><DailySummaryPage /></ProtectedRoute>
+      } />
+
+      {/* Workspace (colleagues) */}
       <Route path="/workspace" element={
         <ProtectedRoute allowedRoles={["colleague"]}><WorkspaceHome /></ProtectedRoute>
       } />
@@ -49,7 +67,7 @@ export default function App() {
         <ProtectedRoute allowedRoles={["colleague"]}><WorkspacePage /></ProtectedRoute>
       } />
 
-      {/* ── Authenticated portal (owner preview / old client login flow) ── */}
+      {/* Authenticated portal */}
       <Route path="/portal" element={
         <ProtectedRoute allowedRoles={["client", "owner"]}><PortalHome /></ProtectedRoute>
       } />

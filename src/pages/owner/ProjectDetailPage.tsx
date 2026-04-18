@@ -1,8 +1,31 @@
 import { useEffect, useState, useRef } from "react";
 import { Link, useParams, useNavigate } from "react-router-dom";
-import { projectsApi, modulesApi, membersApi, checklistApi } from "../../lib/api";
-import type { Project, Module, Member, ChecklistItem } from "../../lib/types";
+import { projectsApi, modulesApi, membersApi, checklistApi, logsApi, contributionsApi } from "../../lib/api";
+import type { Project, Module, Member, ChecklistItem, ActivityLog, Contribution } from "../../lib/types";
 import { AiProjectSetup } from "../../components/AiProjectSetup";
+
+const ACTION_ICONS: Record<string, string> = {
+  module_created: "📦", module_updated: "✏️", module_deleted: "🗑️", module_status_changed: "🔄",
+  task_created: "➕", task_completed: "✅", task_uncompleted: "↩️", task_deleted: "🗑️", task_updated: "✏️",
+  project_created: "🚀", project_updated: "✏️",
+  member_invited: "📨", member_joined: "👋", member_removed: "👤",
+  ai_scaffold: "🤖", ai_chat_edit: "🤖",
+};
+const SOURCE_BADGE: Record<string, { label: string; color: string }> = {
+  manual: { label: "Manual", color: "bg-blue-500/20 text-blue-300" },
+  ai_claude: { label: "Claude", color: "bg-purple-500/20 text-purple-300" },
+  ai_gpt: { label: "GPT", color: "bg-green-500/20 text-green-300" },
+  system: { label: "System", color: "bg-gray-500/20 text-gray-400" },
+};
+function logTimeAgo(dateStr: string) {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  return `${Math.floor(hrs / 24)}d ago`;
+}
 
 const STATUS_CONFIG = {
   not_started: { label: "Not Started", color: "#5a5a66", bg: "#1a1a20", border: "#2e2e38" },
@@ -209,7 +232,11 @@ export default function ProjectDetailPage() {
   const [project, setProject] = useState<Project | null>(null);
   const [modules, setModules] = useState<Module[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
-  const [activeTab, setActiveTab] = useState<"modules" | "map" | "members">("modules");
+  const [activeTab, setActiveTab] = useState<"modules" | "map" | "members" | "logs" | "contributions">("modules");
+  const [logs, setLogs] = useState<ActivityLog[]>([]);
+  const [contributions, setContributions] = useState<Contribution[]>([]);
+  const [logsLoaded, setLogsLoaded] = useState(false);
+  const [contribLoaded, setContribLoaded] = useState(false);
 
   const [confirmDeleteProject, setConfirmDeleteProject] = useState(false);
   const [deletingProject, setDeletingProject] = useState(false);
@@ -248,6 +275,17 @@ export default function ProjectDetailPage() {
     Promise.all([projectsApi.get(projectId), modulesApi.list(projectId), membersApi.list(projectId)])
       .then(([p, m, mem]) => { setProject(p); setModules(m); setMembers(mem); });
   }, [projectId]);
+
+  // Lazy load logs / contributions when tab is first opened
+  useEffect(() => {
+    if (!projectId) return;
+    if (activeTab === "logs" && !logsLoaded) {
+      logsApi.getProjectLogs(projectId).then(setLogs).finally(() => setLogsLoaded(true));
+    }
+    if (activeTab === "contributions" && !contribLoaded) {
+      contributionsApi.get(projectId).then(setContributions).finally(() => setContribLoaded(true));
+    }
+  }, [activeTab, projectId]);
 
   useEffect(() => {
     if (selectedModule && projectId)
@@ -476,26 +514,37 @@ export default function ProjectDetailPage() {
 
       {/* ── Tabs ── */}
       <div className="border-b border-[#1e1e24] px-6 flex gap-0 flex-shrink-0">
-        {(["modules", "map", "members"] as const).map((tab) => (
+        {([
+          { id: "modules", label: "Modules", count: modules.length },
+          { id: "map", label: "🗺 Map", count: null },
+          { id: "members", label: "Members", count: members.length },
+          { id: "logs", label: "Logs", count: null },
+          { id: "contributions", label: "Contributions", count: null },
+        ] as const).map((tab) => (
           <button
-            key={tab}
-            onClick={() => setActiveTab(tab)}
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id as any)}
             className={`py-3 px-4 text-sm capitalize border-b-2 transition-colors ${
-              activeTab === tab
+              activeTab === tab.id
                 ? "border-[#7c6aff] text-white"
                 : "border-transparent text-[#5a5a66] hover:text-[#8a8a99]"
             }`}
           >
-            {tab === "map" ? "🗺 Map" : tab}
-            {tab !== "map" && (
+            {tab.label}
+            {tab.count !== null && (
               <span className={`ml-1.5 text-xs px-1.5 py-0.5 rounded-full ${
-                activeTab === tab ? "bg-[#7c6aff]/20 text-[#7c6aff]" : "bg-[#1e1e24] text-[#5a5a66]"
+                activeTab === tab.id ? "bg-[#7c6aff]/20 text-[#7c6aff]" : "bg-[#1e1e24] text-[#5a5a66]"
               }`}>
-                {tab === "modules" ? modules.length : members.length}
+                {tab.count}
               </span>
             )}
           </button>
         ))}
+        {/* Daily Summary link */}
+        <a href={`/projects/${projectId}/daily`}
+          className="ml-auto py-3 px-3 text-sm text-[#5a5a66] hover:text-[#8a8a99] flex items-center gap-1.5 transition-colors">
+          📊 Daily
+        </a>
       </div>
 
       {/* ── Main content ── */}
@@ -628,6 +677,85 @@ export default function ProjectDetailPage() {
                 </div>
               )}
             </>
+          )}
+
+          {/* ── Logs Tab ── */}
+          {activeTab === "logs" && (
+            <div>
+              <h2 className="text-xs font-semibold text-[#5a5a66] uppercase tracking-widest mb-5">Activity Log</h2>
+              {!logsLoaded ? (
+                <p className="text-[#5a5a66] text-sm">Loading...</p>
+              ) : logs.length === 0 ? (
+                <div className="border border-dashed border-[#1e1e24] rounded-xl p-12 text-center">
+                  <p className="text-[#5a5a66] text-sm">No activity yet.</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {logs.map((log) => {
+                    const icon = ACTION_ICONS[log.action] || "📝";
+                    const src = SOURCE_BADGE[log.source] || SOURCE_BADGE.manual;
+                    return (
+                      <div key={log.id} className="bg-[#0d0d0f] border border-[#1e1e24] rounded-xl px-4 py-3 flex items-start gap-3">
+                        <span className="text-base mt-0.5">{icon}</span>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-white text-sm leading-snug">{log.description}</p>
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className="text-[#5a5a66] text-xs">{log.user_name}</span>
+                            <span className={`text-xs px-1.5 py-0.5 rounded-full ${src.color}`}>{src.label}</span>
+                            <span className="text-[#3a3a44] text-xs">{logTimeAgo(log.created_at)}</span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ── Contributions Tab ── */}
+          {activeTab === "contributions" && (
+            <div>
+              <h2 className="text-xs font-semibold text-[#5a5a66] uppercase tracking-widest mb-5">Team Contributions</h2>
+              {!contribLoaded ? (
+                <p className="text-[#5a5a66] text-sm">Loading...</p>
+              ) : contributions.length === 0 ? (
+                <div className="border border-dashed border-[#1e1e24] rounded-xl p-12 text-center">
+                  <p className="text-[#5a5a66] text-sm">No contributions logged yet.</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {contributions.map((c, i) => {
+                    const maxTasks = Math.max(...contributions.map(x => x.tasks_completed), 1);
+                    return (
+                      <div key={c.user_id || i} className="bg-[#0d0d0f] border border-[#1e1e24] rounded-xl p-5">
+                        <div className="flex items-center justify-between mb-3">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-500 to-blue-500 flex items-center justify-center text-xs font-bold text-white">
+                              {c.user_name[0]?.toUpperCase()}
+                            </div>
+                            <div>
+                              <div className="text-white font-medium text-sm">{c.user_name}</div>
+                              {c.last_active && <div className="text-[#5a5a66] text-xs">Last active {logTimeAgo(c.last_active)}</div>}
+                            </div>
+                          </div>
+                          {i === 0 && <span className="text-xs bg-yellow-500/20 text-yellow-300 px-2 py-0.5 rounded-full">🏆 Top</span>}
+                        </div>
+                        <div className="grid grid-cols-3 gap-3 mb-3">
+                          <div className="text-center"><div className="text-lg font-bold text-green-400">{c.tasks_completed}</div><div className="text-[#5a5a66] text-xs">Done</div></div>
+                          <div className="text-center"><div className="text-lg font-bold text-blue-400">{c.tasks_created}</div><div className="text-[#5a5a66] text-xs">Added</div></div>
+                          <div className="text-center"><div className="text-lg font-bold text-violet-400">{c.modules_created}</div><div className="text-[#5a5a66] text-xs">Modules</div></div>
+                        </div>
+                        <div className="h-1.5 bg-[#1e1e24] rounded-full overflow-hidden">
+                          <div className="h-full bg-gradient-to-r from-violet-500 to-blue-500 rounded-full"
+                            style={{ width: `${Math.round((c.tasks_completed / maxTasks) * 100)}%` }} />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           )}
         </div>
 
@@ -822,6 +950,30 @@ export default function ProjectDetailPage() {
               Open ↗
             </a>
           </div>
+
+          {/* Git link */}
+          <div className="border-t border-[#1e1e24] pt-4 mb-3">
+            <p className="text-xs text-[#5a5a66] mb-2">Git Repository URL (shown on client portal)</p>
+            <div className="flex gap-2">
+              <input
+                type="url"
+                defaultValue={project.git_link || ""}
+                placeholder="https://github.com/your/repo"
+                id="git-link-input"
+                className="flex-1 bg-[#0d0d0f] border border-[#1e1e24] rounded-lg px-3 py-2 text-sm text-white placeholder-[#3a3a44] focus:outline-none focus:border-[#7c6aff]"
+              />
+              <button
+                onClick={() => {
+                  const val = (document.getElementById("git-link-input") as HTMLInputElement)?.value;
+                  projectsApi.update(project.id, { git_link: val || null }).then((updated) => setProject(updated));
+                }}
+                className="bg-[#1e1e24] hover:bg-[#2a2a34] text-white text-sm px-3 py-2 rounded-lg transition-colors"
+              >
+                Save
+              </button>
+            </div>
+          </div>
+
           <div className="border-t border-[#1e1e24] pt-3">
             <p className="text-xs text-[#3a3a44] mb-2">Need to invalidate the old link? Regenerate to get a new token — the old URL will stop working immediately.</p>
             <button

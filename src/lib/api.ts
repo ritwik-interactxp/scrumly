@@ -2,7 +2,8 @@ import axios from "axios";
 import { getToken, clearAuth } from "./auth";
 import type {
   AuthToken, Project, Member, Module, ChecklistItem,
-  PortalProject, ScaffoldPreview, KeyStatus
+  PortalProject, ScaffoldPreview, KeyStatus,
+  ActivityLog, Contribution, DailySummary
 } from "./types";
 
 const api = axios.create({
@@ -19,10 +20,7 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (res) => res,
   (error) => {
-    if (error.response?.status === 401) {
-      clearAuth();
-      window.location.href = "/auth/login";
-    }
+    if (error.response?.status === 401) { clearAuth(); window.location.href = "/auth/login"; }
     return Promise.reject(error);
   }
 );
@@ -37,7 +35,6 @@ export const authApi = {
   me: () => api.get("/auth/me").then((r) => r.data),
 };
 
-// ── API key management (owner only) ──────────────────────────────────────────
 export const keysApi = {
   getStatus: () => api.get<KeyStatus>("/auth/keys").then((r) => r.data),
   save: (body: { anthropic_api_key?: string; openai_api_key?: string }) =>
@@ -49,7 +46,7 @@ export const projectsApi = {
   get: (id: string) => api.get<Project>(`/projects/${id}`).then((r) => r.data),
   create: (name: string, description?: string) =>
     api.post<Project>("/projects", { name, description }).then((r) => r.data),
-  update: (id: string, data: Partial<{ name: string; description: string; status: string }>) =>
+  update: (id: string, data: Partial<{ name: string; description: string; status: string; git_link: string }>) =>
     api.patch<Project>(`/projects/${id}`, data).then((r) => r.data),
   delete: (id: string) => api.delete(`/projects/${id}`),
   regenerateShareToken: (id: string) =>
@@ -70,7 +67,7 @@ export const membersApi = {
 export const modulesApi = {
   list: (projectId: string) =>
     api.get<Module[]>(`/projects/${projectId}/modules`).then((r) => r.data),
-  create: (projectId: string, data: { title: string; description?: string; doc_link?: string; due_date?: string | null }) =>
+  create: (projectId: string, data: { title: string; description?: string; doc_link?: string; due_date?: string | null; creation_source?: string }) =>
     api.post<Module>(`/projects/${projectId}/modules`, data).then((r) => r.data),
   update: (projectId: string, moduleId: string, data: Partial<{ title: string; description: string; status: string; doc_link: string; due_date: string | null }>) =>
     api.patch<Module>(`/projects/${projectId}/modules/${moduleId}`, data).then((r) => r.data),
@@ -91,13 +88,11 @@ export const checklistApi = {
     api.delete(`/projects/${projectId}/checklist/${itemId}`),
 };
 
-// ── Authenticated portal (owner preview / legacy client login) ────────────────
 export const portalApi = {
   get: (projectId: string) =>
     api.get<PortalProject>(`/portal/${projectId}`).then((r) => r.data),
 };
 
-// ── Public portal (no auth — share token) ─────────────────────────────────────
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8001";
 
 export const publicPortalApi = {
@@ -113,59 +108,54 @@ export const publicPortalApi = {
     }),
 };
 
+export const logsApi = {
+  getOwnerLogs: (projectId?: string) =>
+    api.get<ActivityLog[]>("/logs", { params: projectId ? { project_id: projectId } : {} }).then((r) => r.data),
+  getProjectLogs: (projectId: string) =>
+    api.get<ActivityLog[]>(`/projects/${projectId}/logs`).then((r) => r.data),
+};
+
+export const contributionsApi = {
+  get: (projectId: string) =>
+    api.get<Contribution[]>(`/projects/${projectId}/contributions`).then((r) => r.data),
+};
+
+export const dailySummaryApi = {
+  get: (projectId: string) =>
+    api.get<DailySummary>(`/projects/${projectId}/daily-summary`).then((r) => r.data),
+  toggle: (projectId: string) =>
+    api.patch(`/projects/${projectId}/daily-summary/toggle`).then((r) => r.data),
+  generate: (projectId: string) =>
+    api.post<DailySummary>(`/projects/${projectId}/daily-summary/generate`).then((r) => r.data),
+};
+
 export const aiApi = {
-  // anthropic_api_key removed — now pulled from DB server-side
   scaffoldPreview: (description: string) =>
     api.post<ScaffoldPreview>("/ai/scaffold/preview", { description }).then((r) => r.data),
-
   scaffoldCommit: (preview: ScaffoldPreview) =>
     api.post<{ project_id: string; name: string }>("/ai/scaffold/commit", preview).then((r) => r.data),
-
   importProject: (data: ScaffoldPreview) =>
     api.post<{ project_id: string; name: string }>("/ai/import", data).then((r) => r.data),
-
   chat: (messages: { role: string; content: string }[]) =>
     api.post<{ reply: string }>("/ai/chat", { messages }).then((r) => r.data),
 };
 
-// ── Persistent chat sessions (per-project) ────────────────────────────────────
-export interface ChatSession {
-  id: string;
-  project_id: string;
-  title: string;
-  created_at: string;
-  updated_at: string;
-  message_count: number;
-}
-
-export interface ChatMessage {
-  id: string;
-  session_id: string;
-  role: "user" | "assistant";
-  content: string;
-  created_at: string;
-}
+export interface ChatSession { id: string; project_id: string; title: string; created_at: string; updated_at: string; message_count: number; }
+export interface ChatMessage { id: string; session_id: string; role: "user" | "assistant"; content: string; created_at: string; }
 
 export const chatApi = {
   listSessions: (projectId: string) =>
     api.get<ChatSession[]>(`/projects/${projectId}/chat/sessions`).then((r) => r.data),
-
   createSession: (projectId: string, title = "New chat") =>
     api.post<ChatSession>(`/projects/${projectId}/chat/sessions`, { title }).then((r) => r.data),
-
   deleteSession: (projectId: string, sessionId: string) =>
     api.delete(`/projects/${projectId}/chat/sessions/${sessionId}`),
-
   renameSession: (projectId: string, sessionId: string, title: string) =>
     api.patch<ChatSession>(`/projects/${projectId}/chat/sessions/${sessionId}`, { title }).then((r) => r.data),
-
   getMessages: (projectId: string, sessionId: string) =>
     api.get<ChatMessage[]>(`/projects/${projectId}/chat/sessions/${sessionId}/messages`).then((r) => r.data),
-
-  // anthropic_api_key removed — pulled from DB server-side
   send: (projectId: string, sessionId: string, content: string) =>
     api.post<{ reply: string; session_id: string; session_title: string; actions_taken: string[] }>(
-      `/projects/${projectId}/chat/sessions/${sessionId}/send`,
-      { content }
+      `/projects/${projectId}/chat/sessions/${sessionId}/send`, { content }
     ).then((r) => r.data),
 };

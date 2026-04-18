@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import { projectsApi, modulesApi, checklistApi } from "../../lib/api";
+import { projectsApi, modulesApi, checklistApi, logsApi } from "../../lib/api";
+import type { ActivityLog } from "../../lib/types";
 import { getUser } from "../../lib/auth";
 import type { Project, Module, ChecklistItem } from "../../lib/types";
 
@@ -175,7 +176,9 @@ export default function WorkspacePage() {
   const [modules, setModules] = useState<Module[]>([]);
   const [selectedModule, setSelectedModule] = useState<Module | null>(null);
   const [checklist, setChecklist] = useState<ChecklistItem[]>([]);
-  const [activeTab, setActiveTab] = useState<"modules" | "map">("modules");
+  const [activeTab, setActiveTab] = useState<"modules" | "map" | "logs">("modules");
+  const [logs, setLogs] = useState<ActivityLog[]>([]);
+  const [logsLoaded, setLogsLoaded] = useState(false);
   const user = getUser();
 
   useEffect(() => {
@@ -185,6 +188,12 @@ export default function WorkspacePage() {
       if (m.length > 0) setSelectedModule(m[0]);
     });
   }, [projectId]);
+
+  useEffect(() => {
+    if (activeTab === "logs" && !logsLoaded && projectId) {
+      logsApi.getProjectLogs(projectId).then(setLogs).finally(() => setLogsLoaded(true));
+    }
+  }, [activeTab, projectId]);
 
   useEffect(() => {
     if (selectedModule && projectId)
@@ -225,14 +234,14 @@ export default function WorkspacePage() {
 
       {/* Tabs */}
       <div className="border-b border-[#1e1e24] px-6 flex gap-1 pt-2">
-        {(["modules", "map"] as const).map((tab) => (
-          <button key={tab} onClick={() => setActiveTab(tab)}
+        {([["modules","Modules"], ["map","🗺 Map"], ["logs","Logs"]] as const).map(([tab, label]) => (
+          <button key={tab} onClick={() => setActiveTab(tab as any)}
             className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors border-b-2 ${
               activeTab === tab
                 ? "text-white border-[#7c6aff]"
                 : "text-[#5a5a66] border-transparent hover:text-[#8a8a99]"
             }`}>
-            {tab === "map" ? "🗺 Map" : "Modules"}
+            {label}
             {tab === "modules" && (
               <span className={`ml-2 text-xs px-1.5 py-0.5 rounded-full ${
                 activeTab === tab ? "bg-[#7c6aff]/20 text-[#7c6aff]" : "bg-[#1e1e24] text-[#5a5a66]"
@@ -355,6 +364,37 @@ export default function WorkspacePage() {
               </div>
             )}
           </main>
+        </div>
+      )}
+
+      {/* Logs tab */}
+      {activeTab === "logs" && (
+        <div className="flex-1 overflow-y-auto p-6">
+          <h2 className="text-xs font-semibold text-[#5a5a66] uppercase tracking-widest mb-5">Project Activity</h2>
+          {!logsLoaded ? (
+            <p className="text-[#5a5a66] text-sm">Loading...</p>
+          ) : logs.length === 0 ? (
+            <div className="border border-dashed border-[#1e1e24] rounded-xl p-12 text-center">
+              <p className="text-[#5a5a66] text-sm">No activity logged yet.</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {logs.map((log) => (
+                <div key={log.id} className="bg-[#0d0d0f] border border-[#1e1e24] rounded-xl px-4 py-3 flex items-start gap-3">
+                  <span className="text-base mt-0.5">
+                    {log.action === "task_completed" ? "✅" : log.action === "module_created" ? "📦" : log.action === "task_created" ? "➕" : log.action.includes("ai") ? "🤖" : "📝"}
+                  </span>
+                  <div className="flex-1">
+                    <p className="text-white text-sm">{log.description}</p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="text-[#5a5a66] text-xs">{log.user_name}</span>
+                      <span className="text-[#3a3a44] text-xs">{new Date(log.created_at).toLocaleString()}</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
     </div>

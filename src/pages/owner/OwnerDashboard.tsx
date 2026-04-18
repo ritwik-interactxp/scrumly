@@ -166,6 +166,15 @@ export default function OwnerDashboard() {
           >
             <span className="text-base leading-none">+</span> New Project
           </button>
+          <a href="/logs"
+            className="text-xs text-zinc-600 hover:text-zinc-300 transition-colors px-2 py-1 flex items-center gap-1">
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+              <rect x="1" y="2" width="10" height="1.5" rx="0.75" fill="currentColor"/>
+              <rect x="1" y="5.25" width="7" height="1.5" rx="0.75" fill="currentColor"/>
+              <rect x="1" y="8.5" width="8.5" height="1.5" rx="0.75" fill="currentColor"/>
+            </svg>
+            Logs
+          </a>
           <a href="/settings"
             className="text-xs text-zinc-600 hover:text-zinc-300 transition-colors px-2 py-1 flex items-center gap-1">
             <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
