@@ -88,13 +88,14 @@ function ModulePreviewCard({ mod, index }: { mod: ScaffoldPreview["modules"][0];
 interface AiProjectSetupProps {
   projectId?: string;   // If set → persistent mode (per-project chat history in DB)
   onCommit: (projectId: string) => void;
+  onProjectEdited?: () => void;  // called after AI makes changes to an existing project
   onClose: () => void;
 }
 
 const WELCOME_MSG = "Hey! I'm here to help you set up your project in Scrumly. Tell me what you're working on — what's the project about and what's the goal?";
-const WELCOME_MSG_EXISTING = "Hey! I'm here to help you set up or refine your project. What would you like to work on?";
+const WELCOME_MSG_EXISTING = "Hey! I can see your current project. Tell me what you'd like to change — add modules, update tasks, change statuses, anything. Just describe it naturally and I'll make the edits for you.";
 
-export function AiProjectSetup({ projectId, onCommit, onClose }: AiProjectSetupProps) {
+export function AiProjectSetup({ projectId, onCommit, onProjectEdited, onClose }: AiProjectSetupProps) {
   const isPersistent = !!projectId;
 
   const [sessions, setSessions] = useState<ChatSession[]>([]);
@@ -199,6 +200,10 @@ export function AiProjectSetup({ projectId, onCommit, onClose }: AiProjectSetupP
         if (res.session_title) {
           setSessions((prev) => prev.map((s) => s.id === activeSession.id ? { ...s, title: res.session_title, updated_at: new Date().toISOString() } : s));
           setActiveSession((p) => p ? { ...p, title: res.session_title } : p);
+        }
+        // If Claude made project changes, refresh the parent view
+        if (res.actions_taken && res.actions_taken.length > 0 && onProjectEdited) {
+          onProjectEdited();
         }
       } else {
         const fullHistory = [...messages, { role: "user" as const, content: text }];

@@ -690,6 +690,13 @@ export default function ProjectDetailPage() {
               if (projectId) modulesApi.list(projectId).then(setModules);
             }
           }}
+          onProjectEdited={() => {
+            // Refresh modules + project progress after AI makes changes
+            if (projectId) {
+              modulesApi.list(projectId).then(setModules);
+              projectsApi.get(projectId).then(setProject);
+            }
+          }}
           onClose={() => setShowAiChat(false)}
         />
       )}

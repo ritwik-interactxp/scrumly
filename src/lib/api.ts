@@ -164,7 +164,7 @@ export const chatApi = {
 
   // anthropic_api_key removed — pulled from DB server-side
   send: (projectId: string, sessionId: string, content: string) =>
-    api.post<{ reply: string; session_id: string; session_title: string }>(
+    api.post<{ reply: string; session_id: string; session_title: string; actions_taken: string[] }>(
       `/projects/${projectId}/chat/sessions/${sessionId}/send`,
       { content }
     ).then((r) => r.data),
