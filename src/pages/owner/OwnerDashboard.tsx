@@ -83,7 +83,7 @@ export default function OwnerDashboard() {
     if (!aiDesc.trim() || !aiKey.trim()) return;
     setAiLoading(true); setAiError("");
     try {
-      const preview = await aiApi.scaffoldPreview(aiDesc.trim(), aiKey.trim());
+      const preview = await aiApi.scaffoldPreview(aiDesc.trim());
       setAiPreview(preview);
     } catch (e: any) {
       setAiError(e?.response?.data?.detail || "Something went wrong. Check your API key.");

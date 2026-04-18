@@ -198,7 +198,7 @@ export function AiProjectSetup({ apiKey: propApiKey = "", projectId, onCommit, o
     try {
       let reply: string;
       if (isPersistent && activeSession) {
-        const res = await chatApi.send(projectId!, activeSession.id, text, apiKey);
+        const res = await chatApi.send(projectId!, activeSession.id, text);
         reply = res.reply;
         if (res.session_title) {
           setSessions((prev) => prev.map((s) => s.id === activeSession.id ? { ...s, title: res.session_title, updated_at: new Date().toISOString() } : s));
@@ -206,7 +206,7 @@ export function AiProjectSetup({ apiKey: propApiKey = "", projectId, onCommit, o
         }
       } else {
         const fullHistory = [...messages, { role: "user" as const, content: text }];
-        const res = await aiApi.chat(fullHistory, apiKey);
+        const res = await aiApi.chat(fullHistory);
         reply = res.reply;
       }
       const { displayText, preview: p } = parseReply(reply);
