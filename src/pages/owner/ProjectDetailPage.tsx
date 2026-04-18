@@ -965,7 +965,7 @@ export default function ProjectDetailPage() {
               <button
                 onClick={() => {
                   const val = (document.getElementById("git-link-input") as HTMLInputElement)?.value;
-                  projectsApi.update(project.id, { git_link: val || null }).then((updated) => setProject(updated));
+                  projectsApi.update(project.id, { git_link: val || undefined }).then((updated) => setProject(updated));
                 }}
                 className="bg-[#1e1e24] hover:bg-[#2a2a34] text-white text-sm px-3 py-2 rounded-lg transition-colors"
               >
