@@ -38,7 +38,6 @@ export default function OwnerDashboard() {
   const [creating, setCreating] = useState(false);
 
   // AI scaffold / Chat with AI (persisted for convenience)
-  const [aiKey, setAiKey] = useState(localStorage.getItem("scrumly_api_key") || "");
   const [aiDesc, setAiDesc] = useState("");
   const [aiLoading, setAiLoading] = useState(false);
   const [aiPreview, setAiPreview] = useState<ScaffoldPreview | null>(null);
@@ -80,7 +79,7 @@ export default function OwnerDashboard() {
 
   // ── AI ──────────────────────────────────────────────────────────────────
   async function runAiPreview() {
-    if (!aiDesc.trim() || !aiKey.trim()) return;
+    if (!aiDesc.trim()) return;
     setAiLoading(true); setAiError("");
     try {
       const preview = await aiApi.scaffoldPreview(aiDesc.trim());
@@ -365,13 +364,7 @@ export default function OwnerDashboard() {
                 {!aiPreview ? (
                   <>
                     <div className="space-y-3">
-                      <div>
-                        <label className="text-xs text-zinc-500 mb-1.5 block">Your Anthropic API Key</label>
-                        <input type="password" value={aiKey} onChange={(e) => { const v = e.target.value; setAiKey(v); localStorage.setItem("scrumly_api_key", v); }}
-                          placeholder="sk-ant-..."
-                          className="w-full bg-[#0a0a0d] border border-white/8 rounded-lg px-3 py-2.5 text-white text-sm placeholder:text-zinc-600 focus:outline-none focus:border-[#7c6aff]/50 transition-colors font-mono" />
-                        <p className="text-xs text-zinc-600 mt-1">Not stored — used only for this request</p>
-                      </div>
+
                       <div>
                         <label className="text-xs text-zinc-500 mb-1.5 block">Describe your project</label>
                         <textarea value={aiDesc} onChange={(e) => setAiDesc(e.target.value)}
@@ -384,7 +377,7 @@ export default function OwnerDashboard() {
                     <div className="flex gap-3 mt-4">
                       <button onClick={resetModal}
                         className="flex-1 border border-white/8 text-zinc-500 hover:text-white text-sm font-medium py-2.5 rounded-lg transition-colors">Cancel</button>
-                      <button onClick={runAiPreview} disabled={aiLoading || !aiDesc.trim() || !aiKey.trim()}
+                      <button onClick={runAiPreview} disabled={aiLoading || !aiDesc.trim()}
                         className="flex-1 bg-[#7c6aff] hover:bg-[#6b59ee] disabled:opacity-40 text-white text-sm font-medium py-2.5 rounded-lg transition-colors">
                         {aiLoading ? "Thinking..." : "✨ Generate Preview"}
                       </button>
@@ -470,7 +463,6 @@ export default function OwnerDashboard() {
 
       {showAiChat && (
         <AiProjectSetup
-          apiKey={aiKey}
           onCommit={(projectId) => {
             setShowAiChat(false);
             projectsApi.list().then(setProjects);

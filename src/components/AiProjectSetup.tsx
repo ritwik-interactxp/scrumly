@@ -86,7 +86,6 @@ function ModulePreviewCard({ mod, index }: { mod: ScaffoldPreview["modules"][0];
 // ── Main Component ────────────────────────────────────────────────────────────
 
 interface AiProjectSetupProps {
-  apiKey?: string;
   projectId?: string;   // If set → persistent mode (per-project chat history in DB)
   onCommit: (projectId: string) => void;
   onClose: () => void;
@@ -95,11 +94,8 @@ interface AiProjectSetupProps {
 const WELCOME_MSG = "Hey! I'm here to help you set up your project in Scrumly. Tell me what you're working on — what's the project about and what's the goal?";
 const WELCOME_MSG_EXISTING = "Hey! I'm here to help you set up or refine your project. What would you like to work on?";
 
-export function AiProjectSetup({ apiKey: propApiKey = "", projectId, onCommit, onClose }: AiProjectSetupProps) {
+export function AiProjectSetup({ projectId, onCommit, onClose }: AiProjectSetupProps) {
   const isPersistent = !!projectId;
-
-  const [apiKey, setApiKey] = useState(() => propApiKey || localStorage.getItem("scrumly_anthropic_key") || "");
-  const [showKeyInput, setShowKeyInput] = useState(!apiKey);
 
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [sessionsLoading, setSessionsLoading] = useState(false);
@@ -128,12 +124,12 @@ export function AiProjectSetup({ apiKey: propApiKey = "", projectId, onCommit, o
     finally { setSessionsLoading(false); }
   }, [isPersistent, projectId]);
 
-  useEffect(() => { if (isPersistent && apiKey) loadSessions(); }, [isPersistent, apiKey, loadSessions]);
+  useEffect(() => { if (isPersistent) loadSessions(); }, [isPersistent, loadSessions]);
 
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages, sending]);
 
   useEffect(() => {
-    if (!isPersistent && apiKey && messages.length === 0)
+    if (!isPersistent && messages.length === 0)
       setMessages([{ role: "assistant", content: WELCOME_MSG }]);
   }, []); // eslint-disable-line
 
@@ -213,7 +209,7 @@ export function AiProjectSetup({ apiKey: propApiKey = "", projectId, onCommit, o
       setMessages((prev) => [...prev, { role: "assistant", content: displayText || reply }]);
       if (p) { setPreview(p); setShowPreview(true); }
     } catch (e: any) {
-      setError(e?.response?.data?.detail || "Something went wrong. Check your API key.");
+      setError(e?.response?.data?.detail || "Something went wrong. Make sure your Anthropic API key is saved in Settings.");
       setMessages((prev) => prev.slice(0, -1));
     } finally {
       setSending(false);
@@ -229,45 +225,6 @@ export function AiProjectSetup({ apiKey: propApiKey = "", projectId, onCommit, o
     finally { setCommitting(false); }
   }
 
-  function handleSaveKey() {
-    const trimmed = apiKey.trim();
-    if (!trimmed.startsWith("sk-ant-")) { setError("Should start with sk-ant-"); return; }
-    localStorage.setItem("scrumly_anthropic_key", trimmed);
-    setShowKeyInput(false); setError("");
-    if (!isPersistent) setMessages([{ role: "assistant", content: WELCOME_MSG }]);
-    if (isPersistent) loadSessions();
-  }
-
-  // ── Key screen ─────────────────────────────────────────────────────────────
-  if (showKeyInput) return (
-    <div className="fixed inset-0 bg-[#0a0a0d]/95 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-[#0d0d10] border border-white/10 rounded-2xl p-6 shadow-2xl w-full max-w-md">
-        <div className="flex items-center gap-3 mb-5">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#7c6aff] to-[#a78bfa] flex items-center justify-center">
-            <svg width="18" height="18" viewBox="0 0 16 16" fill="none">
-              <path d="M8 2C8 2 3 5 3 9.5C3 12 5 14 8 14C11 14 13 12 13 9.5C13 5 8 2 8 2Z" fill="white" fillOpacity="0.9" />
-              <circle cx="6.5" cy="9" r="1" fill="#7c6aff" /><circle cx="9.5" cy="9" r="1" fill="#7c6aff" />
-            </svg>
-          </div>
-          <div>
-            <h2 className="text-lg font-semibold text-white">Connect Anthropic API</h2>
-            <p className="text-xs text-[#5a5a66]">Saved locally — never sent to our servers</p>
-          </div>
-        </div>
-        <input type="password" value={apiKey} onChange={(e) => setApiKey(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && handleSaveKey()} placeholder="sk-ant-api03-..." autoFocus
-          className="w-full bg-[#111114] border border-white/8 rounded-lg px-4 py-2.5 text-white text-sm placeholder:text-[#3a3a44] focus:outline-none focus:border-[#7c6aff]/50 font-mono mb-3" />
-        {error && <p className="text-xs text-red-400 mb-3">{error}</p>}
-        <p className="text-xs text-[#5a5a66] mb-4">Get your key at{" "}
-          <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noreferrer" className="text-[#7c6aff] hover:underline">console.anthropic.com</a>
-        </p>
-        <div className="flex gap-2">
-          <button onClick={onClose} className="flex-1 bg-[#111114] border border-white/8 text-[#8a8a99] hover:text-white text-sm py-2.5 rounded-lg transition-colors">Cancel</button>
-          <button onClick={handleSaveKey} className="flex-1 bg-[#7c6aff] hover:bg-[#6b59ee] text-white text-sm py-2.5 rounded-lg transition-colors">Continue →</button>
-        </div>
-      </div>
-    </div>
-  );
 
   return (
     <div className="fixed inset-0 bg-[#0a0a0d]/95 backdrop-blur-sm z-50 flex" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>

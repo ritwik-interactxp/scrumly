@@ -215,7 +215,6 @@ export default function ProjectDetailPage() {
   const [deletingProject, setDeletingProject] = useState(false);
 
   const [showAiChat, setShowAiChat] = useState(false);
-  const [aiKey] = useState(() => localStorage.getItem("scrumly_anthropic_key") || localStorage.getItem("scrumly_api_key") || "");
 
   const [showModuleForm, setShowModuleForm] = useState(false);
   const [moduleTitle, setModuleTitle] = useState("");
@@ -682,7 +681,6 @@ export default function ProjectDetailPage() {
 
       {showAiChat && (
         <AiProjectSetup
-          apiKey={aiKey}
           projectId={projectId}
           onCommit={(newProjectId) => {
             if (newProjectId !== projectId) {
@@ -731,16 +729,12 @@ export default function ProjectDetailPage() {
                 <input type="text" value={inviteName} onChange={(e) => setInviteName(e.target.value)} placeholder="Their name" autoFocus className={INPUT} />
                 <input type="email" value={inviteEmail} onChange={(e) => setInviteEmail(e.target.value)} placeholder="Email address" className={INPUT} />
                 <div>
-                  <p className="text-xs text-[#5a5a66] mb-2">Role in project</p>
-                  <div className="flex gap-2">
-                    {(["colleague", "client"] as const).map((r) => (
-                      <button key={r} onClick={() => setInviteRole(r)}
-                        className={`flex-1 py-2.5 text-sm rounded-lg border transition-colors capitalize ${inviteRole === r ? "border-[#7c6aff] bg-[#7c6aff]/10 text-[#7c6aff]" : "border-[#1e1e24] text-[#5a5a66] hover:text-white hover:border-[#2e2e38]"}`}>
-                        {r}
-                      </button>
-                    ))}
+                  <p className="text-xs text-[#5a5a66] mb-1">Role in project</p>
+                  <p className="text-xs text-[#3a3a44]">Colleagues can interact with tasks and modules.</p>
+                  <div className="mt-3 px-3 py-2.5 rounded-lg bg-[#7c6aff]/6 border border-[#7c6aff]/15">
+                    <p className="text-xs text-[#7c6aff]">Want to share with a client?</p>
+                    <p className="text-xs text-[#475569] mt-0.5">Use the <strong className="text-[#94a3b8]">Client Link</strong> button in the header — no account needed.</p>
                   </div>
-                  <p className="text-xs text-[#3a3a44] mt-2">{inviteRole === "client" ? "Clients see a simplified read-only portal view." : "Colleagues can interact with tasks and modules."}</p>
                 </div>
               </div>
               <div className="flex gap-3 mt-5">
